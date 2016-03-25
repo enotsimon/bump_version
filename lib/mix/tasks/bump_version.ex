@@ -8,8 +8,10 @@ defmodule Mix.Tasks.BumpVersion do
   @moduledoc """
   Updates your 'VERSION' file, and make commit, if its a git repository
 
-      mix bumpversion
-      mix bumpversion 2.3.4
+      mix bump_version major -- increase major version
+      mix bump_version minor -- increase minor version
+      mix bump_version patch -- increase patch version [deafult]
+      mix bump_version -- same as 'patch'
 
   This task automatically rise current App version
   it allows on convention that version is written in file with name VERSION and
@@ -24,20 +26,17 @@ defmodule Mix.Tasks.BumpVersion do
         ...
       ]
 
-  if version is manually set, use it
-
   if current code is in git repository, we automatically make commit with message
       bump version
   """
 
   # TODO: check if passed version is lower than in VERSION file
   def run(args) do
-    #{opts, args, _} = OptionParser.parse(args, aliases: [o: :output])
     check_version_file_exists()
     {_opts, args, _some} = OptionParser.parse(args)
     version_to_write = case args do
-      [] -> read_and_increment_version();
-      [version] -> check_version_format(version);
+      [] -> read_and_increment_version("patch");
+      [inc_type] -> read_and_increment_version(inc_type);
       value -> err_incorrect_input(value)
     end
     case File.write(@version_file, version_to_write) do
@@ -46,11 +45,11 @@ defmodule Mix.Tasks.BumpVersion do
     end
   end
 
-  defp read_and_increment_version() do
+  defp read_and_increment_version(inc_type) do
     File.read!(@version_file)
     |> String.strip
     |> check_version_format
-    |> increment_version
+    |> increment_version(inc_type)
   end
 
   defp check_version_file_exists() do
@@ -68,10 +67,15 @@ defmodule Mix.Tasks.BumpVersion do
     end
   end
 
-  defp increment_version(version) do
+  defp increment_version(version, inc_type) do
     [first, second, third] = String.split(version, ".") |> Enum.map(&(String.to_integer(&1)))
-    Enum.join([first, second, third + 1], ".")
+    Enum.join(increment_version2([first, second, third], inc_type), ".")
   end
+
+  defp increment_version2([first, second, third], "patch") do [first, second, third + 1] end
+  defp increment_version2([first, second, _third], "minor") do [first, second + 1, 0] end
+  defp increment_version2([first, _second, _third], "major") do [first + 1, 0, 0] end
+  defp increment_version2(_, inc_type) do err_incorrect_inc_type(inc_type) end
 
 
 
@@ -112,6 +116,13 @@ defmodule Mix.Tasks.BumpVersion do
     err("
       cannot write new version to #{@version_file}
       reason: #{inspect reason}
+    ")
+  end
+
+  defp err_incorrect_inc_type(inc_type) do
+    err("
+      wrong argument #{inspect inc_type}
+      should be one of: major|minor|patch
     ")
   end
 

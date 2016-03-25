@@ -26,6 +26,9 @@ mix deps.compile
 
 ```
 mix bump_version
+mix bump_version patch
+mix bump_version minor
+mix bump_version major
 ```
 
 ## help
