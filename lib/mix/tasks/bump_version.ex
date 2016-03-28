@@ -40,9 +40,10 @@ defmodule Mix.Tasks.BumpVersion do
       value -> err_incorrect_input(value)
     end
     case File.write(@version_file, version_to_write) do
-      :ok -> success_msg(version_to_write);
+      :ok -> :ok;
       {:error, reason} -> err_cant_write_file(reason)
     end
+    try_to_do_git_commit(version_to_write)
   end
 
   defp read_and_increment_version(inc_type) do
@@ -79,14 +80,37 @@ defmodule Mix.Tasks.BumpVersion do
 
 
 
+  defp try_to_do_git_commit(version_to_write) do
+    case System.find_executable("git") do
+      nil ->
+        no_git_msg(version_to_write)
+      executable ->
+        cmd = ["commit", "-m", "#{version_to_write}", "--", "#{@version_file}"]
+        commit_msg = case System.cmd(executable, cmd, [stderr_to_stdout: true]) do
+          {msg1, 0} -> hd(String.split(msg1, "\n"))
+          {msg2, code} -> err_git_response(msg2, code)
+        end
+        success_msg(version_to_write, commit_msg)
+    end
+  end
+
+
 
   #
   # outputted messages
   #
-  defp success_msg(version) do
+  defp no_git_msg(version) do
     IO.puts "
-      success!
       written version: #{inspect version}
+      seems your code not in git repository, will not commit version change
+    "
+  end
+
+  defp success_msg(version, commit_msg) do
+    IO.puts "
+      success.
+      written version: #{inspect version}
+      commit message: #{commit_msg}
     "
   end
 
@@ -125,6 +149,16 @@ defmodule Mix.Tasks.BumpVersion do
       should be one of: major|minor|patch
     ")
   end
+
+  defp err_git_response(msg, code) do
+    err("
+      git error
+      code: #{inspect code}
+      message:
+      #{msg}
+    ")
+  end
+
 
 
 
