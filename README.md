@@ -11,7 +11,7 @@ thats for `mix release`
 
 add
 
-`{:bump_version, git: "ssh://git@stash.sj-dev.local:7999/search/bump_version.git", branch: "master"}`
+`{:bump_version, git: "https://github.com/skorobogatko/bump_version.git", branch: "master"}`
 
 to your `mix.exs` file in `deps()` section
 
